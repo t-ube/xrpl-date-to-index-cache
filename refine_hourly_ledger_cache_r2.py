@@ -37,7 +37,7 @@ from datetime import datetime, timedelta, timezone
 from xrpl.models.requests import Ledger
 
 # R2対応版の append_rough_ledger_cache.py から共通処理をインポート
-from append_rough_ledger_cache import (
+from append_rough_ledger_cache_r2 import (
     load_cache,
     save_cache,
     FutureLedgerError,

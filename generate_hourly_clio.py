@@ -198,18 +198,27 @@ def generate_hourly_for_range(key: str, dt_start: datetime, dt_end: datetime) ->
     cache = load_cache(key)
     hourly: dict = cache.setdefault("hourly", {})
 
+    # 現在時刻（UTC）を取得し、未来は処理しない
+    now = datetime.now(timezone.utc)
+    effective_end = min(dt_end, now)
+
     cur = dt_start
-    total_hours = int(((dt_end - dt_start).total_seconds() // 3600) + 1)
+    total_hours = int(((effective_end - dt_start).total_seconds() // 3600) + 1)
+    if total_hours < 1:
+        print("処理対象の時間がありません（開始時刻が未来）")
+        return
+
     processed = 0
     added = 0
     skipped_existing = 0
-    skipped_future = 0
 
-    print(f"{dt_start} ～ {dt_end} の hourly を {key} に生成します。")
+    print(f"{dt_start} ～ {effective_end} の hourly を {key} に生成します。")
+    if dt_end > now:
+        print(f"（元の終了日 {dt_end} は未来のため {effective_end} まで処理）")
     print(f"Clio サーバー: {CLIO_URL}")
     print("-" * 60)
 
-    while cur <= dt_end:
+    while cur <= effective_end:
         processed += 1
         
         # hourly のキー: 2025-01-01T00:00:00Z 形式
@@ -227,10 +236,8 @@ def generate_hourly_for_range(key: str, dt_start: datetime, dt_end: datetime) ->
             result = clio_ledger_index(cur)
             
             if result is None:
-                print(f"⏭ 未来またはデータなし")
-                skipped_future += 1
-                cur += timedelta(hours=1)
-                continue
+                print(f"⏭ データなし（終了）")
+                break
             
             hourly[key_iso] = {
                 "ledger_index": result["ledger_index"],
@@ -253,7 +260,6 @@ def generate_hourly_for_range(key: str, dt_start: datetime, dt_end: datetime) ->
     print(f"  処理数: {processed}")
     print(f"  追加: {added}")
     print(f"  既存スキップ: {skipped_existing}")
-    print(f"  未来スキップ: {skipped_future}")
 
     if added > 0:
         save_cache(key, cache)

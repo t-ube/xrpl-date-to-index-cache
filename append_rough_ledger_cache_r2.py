@@ -300,6 +300,7 @@ def append_rough_ledger_cache(key: str, dt_start: datetime, dt_end: datetime) ->
     """
     R2上の key で指定された JSON キャッシュ（新フォーマット）に対して、
     [dt_start, dt_end] の日付範囲で「存在しない daily だけ」ラフ値を追加する。
+    変更があった場合のみ、最後に1回保存する。
     """
     cache = load_cache(key)
     daily: dict = cache.setdefault("daily", {})
@@ -310,21 +311,10 @@ def append_rough_ledger_cache(key: str, dt_start: datetime, dt_end: datetime) ->
     processed = 0
     added = 0
 
-    # 日付変更時の自動保存用
-    prev_date = None
-
     print(f"{dt_start.date()} ～ {dt_end.date()} の不足分を {key} の daily に追記します。")
 
     while cur <= dt_end:
         processed += 1
-        
-        # 日付が変わったタイミングで一度保存
-        current_date = cur.date()
-        if prev_date is not None and current_date != prev_date:
-            print(f"日付が変わったため保存: {prev_date}")
-            save_cache(key, cache)
-        prev_date = current_date
-        
         date_key = cur.strftime("%Y-%m-%d")
 
         if date_key in daily:
@@ -352,7 +342,12 @@ def append_rough_ledger_cache(key: str, dt_start: datetime, dt_end: datetime) ->
         cur += timedelta(days=1)
 
     print(f"\n 処理完了: {processed} 日中 {added} 日を daily に追加")
-    save_cache(key, cache)
+    
+    # 変更があった場合のみ保存
+    if added > 0:
+        save_cache(key, cache)
+    else:
+        print("変更なしのため保存スキップ")
 
 
 def parse_date(s: str) -> datetime:

@@ -1,7 +1,10 @@
-name: Update XRPL Ledger Cache
+name: Update XRPL Ledger Cache (Clio)
 
 on:
+  repository_dispatch:
+    types: [cron-job]
   workflow_dispatch: {}
+
 
 jobs:
   update-cache:
@@ -18,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install boto3 xrpl-py
+          pip install boto3 requests
 
       - name: Run cache update script
         env:
@@ -27,4 +30,4 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
         run: |
-          python update_ledger_cache.py
+          python update_ledger_cache_clio.py
